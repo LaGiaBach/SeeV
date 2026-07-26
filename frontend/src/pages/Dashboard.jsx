@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import CvCard from '../components/CvCard'
 import { mockCvs } from '../data/mockCvs'
 
 // TODO: thay mockCvs bằng dữ liệu từ GET /api/cvs khi tích hợp API
-// TODO: onEdit -> điều hướng /cv/:id, onDelete -> DELETE /api/cvs/:id, onPrint -> xuất bản in CV
+// TODO: onDelete -> DELETE /api/cvs/:id, onPrint -> xuất bản in CV
 function Dashboard() {
+  const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
   const [cvs, setCvs] = useState(mockCvs)
 
@@ -15,6 +17,10 @@ function Dashboard() {
 
   function handlePrint() {
     window.print()
+  }
+
+  function handleEdit(cv) {
+    navigate(`/cv/${cv.id}`)
   }
 
   return (
@@ -30,6 +36,7 @@ function Dashboard() {
 
           <button
             type="button"
+            onClick={() => navigate('/cv/new')}
             className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 active:bg-brand-800 transition"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -43,6 +50,7 @@ function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <button
               type="button"
+              onClick={() => navigate('/cv/new')}
               className="aspect-3/4 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center gap-2 text-gray-400 dark:text-gray-500 hover:border-brand-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-500/10 transition"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10">
@@ -52,7 +60,7 @@ function Dashboard() {
             </button>
 
             {cvs.map((cv) => (
-              <CvCard key={cv.id} cv={cv} onDelete={handleDelete} onPrint={handlePrint} />
+              <CvCard key={cv.id} cv={cv} onEdit={handleEdit} onDelete={handleDelete} onPrint={handlePrint} />
             ))}
           </div>
 
