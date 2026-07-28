@@ -25,3 +25,38 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Placeholder cho text sửa trực tiếp (contentEditable) trên CV preview khi đang rỗng. */
+.cv-editable:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+@media print {
+  /* Không in chữ gợi ý (placeholder) của các trường còn để trống. */
+  .cv-editable:empty:before {
+    content: none;
+  }
+}
+
+/* Khi in trong CV editor (nút "In"/"Tải PDF"), chỉ in phần preview CV, ẩn toàn bộ UI editor còn lại.
+   Scope theo .print-cv-page để không ảnh hưởng nút "In" ở các trang khác (vd. Dashboard). */
+@media print {
+  .print-cv-page * {
+    visibility: hidden;
+  }
+
+  .print-cv-page #cv-preview-page,
+  .print-cv-page #cv-preview-page * {
+    visibility: visible;
+  }
+
+  .print-cv-page #cv-preview-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    box-shadow: none;
+  }
+}

@@ -5,6 +5,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Templates from './pages/Templates'
 import CvEditor from './pages/CvEditor'
+import Settings from './pages/Settings'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Route path="/templates" element={<Templates />} />
       <Route path="/cv/new" element={<CvEditor />} />
       <Route path="/cv/:id" element={<CvEditor />} />
+      <Route path="/settings" element={<Settings />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )

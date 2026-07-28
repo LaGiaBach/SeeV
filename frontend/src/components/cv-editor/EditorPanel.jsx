@@ -1,9 +1,20 @@
 import { useState } from 'react'
-import { SECTION_META } from '../../data/mockCvDetails'
-
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
-}
+import { getSectionLabel } from '../../data/mockCvDetails'
+import {
+  updatePersonalField,
+  addExperienceItem,
+  updateExperienceItem,
+  removeExperienceItem,
+  addEducationItem,
+  updateEducationItem,
+  removeEducationItem,
+  addSkill as addSkillMutation,
+  removeSkill as removeSkillMutation,
+  reorderSections,
+  addCustomSection as addCustomSectionMutation,
+  updateCustomSection as updateCustomSectionMutation,
+  removeCustomSection as removeCustomSectionMutation,
+} from '../../utils/cvMutations'
 
 function Field({ label, ...props }) {
   return (
@@ -37,66 +48,103 @@ function EditorPanel({ cv, onChange }) {
   const [skillInput, setSkillInput] = useState('')
 
   function updatePersonal(field, value) {
-    onChange({ ...cv, personal: { ...cv.personal, [field]: value } })
-  }
-
-  function reorder(from, to) {
-    const next = [...cv.sectionsOrder]
-    const [moved] = next.splice(from, 1)
-    next.splice(to, 0, moved)
-    onChange({ ...cv, sectionsOrder: next })
+    onChange(updatePersonalField(cv, field, value))
   }
 
   function handleDrop(index) {
-    if (dragIndex !== null && dragIndex !== index) reorder(dragIndex, index)
+    if (dragIndex !== null && dragIndex !== index) onChange(reorderSections(cv, dragIndex, index))
     setDragIndex(null)
     setDragOverIndex(null)
   }
 
   function addExperience() {
-    const item = { id: generateId(), role: '', company: '', start: '', end: '', description: '' }
-    onChange({ ...cv, experience: [...cv.experience, item] })
+    onChange(addExperienceItem(cv))
   }
 
   function updateExperience(id, field, value) {
-    onChange({
-      ...cv,
-      experience: cv.experience.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
-    })
+    onChange(updateExperienceItem(cv, id, field, value))
   }
 
   function removeExperience(id) {
-    onChange({ ...cv, experience: cv.experience.filter((item) => item.id !== id) })
+    onChange(removeExperienceItem(cv, id))
   }
 
   function addEducation() {
-    const item = { id: generateId(), school: '', degree: '', start: '', end: '' }
-    onChange({ ...cv, education: [...cv.education, item] })
+    onChange(addEducationItem(cv))
   }
 
   function updateEducation(id, field, value) {
-    onChange({
-      ...cv,
-      education: cv.education.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
-    })
+    onChange(updateEducationItem(cv, id, field, value))
   }
 
   function removeEducation(id) {
-    onChange({ ...cv, education: cv.education.filter((item) => item.id !== id) })
+    onChange(removeEducationItem(cv, id))
   }
 
   function addSkill() {
-    const value = skillInput.trim()
-    if (!value) return
-    onChange({ ...cv, skills: [...cv.skills, value] })
+    if (!skillInput.trim()) return
+    onChange(addSkillMutation(cv, skillInput))
     setSkillInput('')
   }
 
   function removeSkill(index) {
-    onChange({ ...cv, skills: cv.skills.filter((_, i) => i !== index) })
+    onChange(removeSkillMutation(cv, index))
+  }
+
+  function handleAvatarChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => updatePersonal('avatar', reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  function addCustomSection() {
+    const next = addCustomSectionMutation(cv)
+    onChange(next)
+    const newKey = next.sectionsOrder[next.sectionsOrder.length - 1]
+    setExpanded(newKey)
+  }
+
+  function updateCustomSection(id, field, value) {
+    onChange(updateCustomSectionMutation(cv, id, field, value))
+  }
+
+  function removeCustomSection(id) {
+    onChange(removeCustomSectionMutation(cv, id))
   }
 
   function renderSectionBody(key) {
+    if (key.startsWith('custom:')) {
+      const id = key.slice('custom:'.length)
+      const section = cv.customSections.find((s) => s.id === id)
+      if (!section) return null
+      return (
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => removeCustomSection(id)}
+              className="text-xs text-red-600 dark:text-red-400 hover:underline"
+            >
+              Xoá mục này
+            </button>
+          </div>
+          <Field
+            label="Tiêu đề mục"
+            value={section.title}
+            onChange={(e) => updateCustomSection(id, 'title', e.target.value)}
+          />
+          <TextArea
+            label="Nội dung"
+            value={section.content}
+            onChange={(e) => updateCustomSection(id, 'content', e.target.value)}
+            placeholder="Chứng chỉ, dự án, giải thưởng..."
+          />
+        </div>
+      )
+    }
+
     switch (key) {
       case 'summary':
         return (
@@ -258,6 +306,32 @@ function EditorPanel({ cv, onChange }) {
     <div className="w-96 shrink-0 h-full overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-4">
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Thông tin cá nhân</h3>
+
+        <div className="flex items-center gap-3 pb-2">
+          <div className="w-14 h-14 shrink-0 rounded-full bg-brand-100 dark:bg-brand-500/15 overflow-hidden flex items-center justify-center text-lg font-semibold text-brand-700 dark:text-brand-400">
+            {cv.personal.avatar ? (
+              <img src={cv.personal.avatar} alt="Ảnh đại diện" className="w-full h-full object-cover" />
+            ) : (
+              cv.personal.fullName?.trim()?.charAt(0)?.toUpperCase() || '?'
+            )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer text-center">
+              Tải ảnh lên
+              <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+            </label>
+            {cv.personal.avatar && (
+              <button
+                type="button"
+                onClick={() => updatePersonal('avatar', null)}
+                className="text-xs text-red-600 dark:text-red-400 hover:underline"
+              >
+                Xoá ảnh
+              </button>
+            )}
+          </div>
+        </div>
+
         <Field label="Họ và tên" value={cv.personal.fullName} onChange={(e) => updatePersonal('fullName', e.target.value)} />
         <Field label="Vị trí ứng tuyển" value={cv.personal.title} onChange={(e) => updatePersonal('title', e.target.value)} />
         <Field label="Email" value={cv.personal.email} onChange={(e) => updatePersonal('email', e.target.value)} />
@@ -298,7 +372,7 @@ function EditorPanel({ cv, onChange }) {
                   onClick={() => setExpanded((prev) => (prev === key ? null : key))}
                   className="flex-1 flex items-center justify-between text-left text-sm font-medium text-gray-700 dark:text-gray-200"
                 >
-                  {SECTION_META[key].label}
+                  {getSectionLabel(cv, key)}
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -316,6 +390,14 @@ function EditorPanel({ cv, onChange }) {
             </div>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={addCustomSection}
+          className="mt-2 w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-2 text-sm text-gray-500 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600 transition"
+        >
+          + Thêm mục tùy chỉnh
+        </button>
       </div>
     </div>
   )

@@ -8,7 +8,7 @@ function formatDate(dateString) {
   })
 }
 
-function CvCard({ cv, onEdit, onDelete, onPrint }) {
+function CvCard({ cv, onEdit, onDuplicate, onShare, onDelete, onPrint }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -67,6 +67,20 @@ function CvCard({ cv, onEdit, onDelete, onPrint }) {
                 className="block w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Chỉnh sửa
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAction(onDuplicate)}
+                className="block w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Sao chép
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAction(onShare)}
+                className="block w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Chia sẻ
               </button>
               <button
                 type="button"
