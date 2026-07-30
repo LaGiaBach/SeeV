@@ -33,9 +33,11 @@ Chạy tại `http://localhost:5000`. Yêu cầu MongoDB đang chạy (local ho�
 
 ### API
 
-| Method | Endpoint         | Mô tả              |
-| ------ | ---------------- | ------------------ |
+| Method | Endpoint          | Mô tả               |
+| ------ | ----------------- | ------------------- |
 | GET    | /api/health       | Kiểm tra server     |
+| POST   | /api/auth/register | Đăng ký tài khoản   |
+| POST   | /api/auth/login   | Đăng nhập           |
 | GET    | /api/cvs          | Lấy danh sách CV    |
 | GET    | /api/cvs/:id      | Lấy 1 CV            |
 | POST   | /api/cvs          | Tạo CV mới          |
