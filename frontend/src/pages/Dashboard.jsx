@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import CvCard from '../components/CvCard'
 import ShareModal from '../components/ShareModal'
-import { mockCvs } from '../data/mockCvs'
+import { fetchCvs, createCv, deleteCv } from '../lib/api'
+import { cvTemplates } from '../data/cvTemplates'
 
 const SORT_OPTIONS = [
   { value: 'updated_desc', label: 'Cập nhật gần đây' },
@@ -12,15 +13,47 @@ const SORT_OPTIONS = [
   { value: 'name_desc', label: 'Tên Z-A' },
 ]
 
-// TODO: thay mockCvs bằng dữ liệu từ GET /api/cvs khi tích hợp API
-// TODO: onDelete -> DELETE /api/cvs/:id, onDuplicate -> POST /api/cvs, onPrint -> xuất bản in CV
+const DEFAULT_ACCENT = 'from-brand-400 to-brand-600'
+
+function decorateCv(cv) {
+  const template = cvTemplates.find((t) => t.id === cv.templateId)
+  return {
+    ...cv,
+    template: template?.name || 'Cơ bản',
+    accent: template?.accent || DEFAULT_ACCENT,
+  }
+}
+
 function Dashboard() {
   const navigate = useNavigate()
   const [collapsed, setCollapsed] = useState(false)
-  const [cvs, setCvs] = useState(mockCvs)
+  const [cvs, setCvs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('updated_desc')
   const [shareTarget, setShareTarget] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    setLoading(true)
+    setError('')
+    fetchCvs()
+      .then((data) => {
+        if (!cancelled) setCvs(data.map(decorateCv))
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const visibleCvs = useMemo(() => {
     const filtered = cvs.filter((cv) => cv.title.toLowerCase().includes(searchTerm.trim().toLowerCase()))
@@ -40,8 +73,15 @@ function Dashboard() {
     })
   }, [cvs, searchTerm, sortBy])
 
-  function handleDelete(cv) {
-    setCvs((prev) => prev.filter((item) => item.id !== cv.id))
+  async function handleDelete(cv) {
+    const prev = cvs
+    setCvs((list) => list.filter((item) => item.id !== cv.id))
+    try {
+      await deleteCv(cv.id)
+    } catch (err) {
+      setCvs(prev)
+      setError(err.message)
+    }
   }
 
   function handlePrint() {
@@ -52,9 +92,15 @@ function Dashboard() {
     navigate(`/cv/${cv.id}`)
   }
 
-  function handleDuplicate(cv) {
-    const copy = { ...cv, id: `${cv.id}-copy-${Date.now()}`, title: `${cv.title} (Bản sao)`, updatedAt: new Date().toISOString() }
-    setCvs((prev) => [copy, ...prev])
+  async function handleDuplicate(cv) {
+    setError('')
+    try {
+      const { id, createdAt, updatedAt, template, accent, ...rest } = cv
+      const created = await createCv({ ...rest, title: `${cv.title} (Bản sao)` })
+      setCvs((list) => [decorateCv(created), ...list])
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   function handleShare(cv) {
@@ -85,6 +131,12 @@ function Dashboard() {
         </header>
 
         <div className="p-6">
+          {error && (
+            <p className="mb-4 rounded-lg bg-red-50 dark:bg-red-500/10 px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
             <div className="relative flex-1 max-w-sm">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400">
@@ -136,7 +188,7 @@ function Dashboard() {
             ))}
           </div>
 
-          {cvs.length === 0 && (
+          {!loading && cvs.length === 0 && (
             <p className="mt-10 text-center text-sm text-gray-500 dark:text-gray-400">Bạn chưa có CV nào. Hãy tạo CV đầu tiên!</p>
           )}
 

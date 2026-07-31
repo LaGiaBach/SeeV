@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { protect } from '../middleware/auth.js'
 import {
   getCvs,
   getCvById,
@@ -8,6 +9,8 @@ import {
 } from '../controllers/cvController.js'
 
 const router = Router()
+
+router.use(protect)
 
 router.get('/', getCvs)
 router.get('/:id', getCvById)

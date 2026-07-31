@@ -38,8 +38,10 @@ Chạy tại `http://localhost:5000`. Yêu cầu MongoDB đang chạy (local ho�
 | GET    | /api/health       | Kiểm tra server     |
 | POST   | /api/auth/register | Đăng ký tài khoản   |
 | POST   | /api/auth/login   | Đăng nhập           |
-| GET    | /api/cvs          | Lấy danh sách CV    |
-| GET    | /api/cvs/:id      | Lấy 1 CV            |
-| POST   | /api/cvs          | Tạo CV mới          |
-| PUT    | /api/cvs/:id      | Cập nhật CV         |
-| DELETE | /api/cvs/:id      | Xóa CV              |
+| GET    | /api/cvs          | Lấy danh sách CV của tôi (yêu cầu đăng nhập) |
+| GET    | /api/cvs/:id      | Lấy 1 CV (yêu cầu đăng nhập)   |
+| POST   | /api/cvs          | Tạo CV mới (yêu cầu đăng nhập) |
+| PUT    | /api/cvs/:id      | Cập nhật CV (yêu cầu đăng nhập) |
+| DELETE | /api/cvs/:id      | Xóa CV (yêu cầu đăng nhập)     |
+
+Các endpoint `/api/cvs/*` yêu cầu header `Authorization: Bearer <token>` lấy từ lúc đăng ký/đăng nhập.

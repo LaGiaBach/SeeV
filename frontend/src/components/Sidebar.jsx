@@ -1,5 +1,6 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import { clearSession } from '../utils/auth'
 
 const menuItems = [
   {
@@ -30,6 +31,12 @@ const menuItems = [
 
 function Sidebar({ collapsed, onToggle }) {
   const location = useLocation()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    clearSession()
+    navigate('/login')
+  }
 
   return (
     <aside
@@ -94,6 +101,31 @@ function Sidebar({ collapsed, onToggle }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
           {!collapsed && <span>Thu nhỏ menu</span>}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          title={collapsed ? 'Đăng xuất' : undefined}
+          className={`flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition ${
+            collapsed ? 'justify-center' : ''
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.8}
+            stroke="currentColor"
+            className="w-5 h-5 shrink-0"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+            />
+          </svg>
+          {!collapsed && <span>Đăng xuất</span>}
         </button>
       </div>
     </aside>

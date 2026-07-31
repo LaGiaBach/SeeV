@@ -5,8 +5,9 @@ import CvPreview from '../components/cv-editor/CvPreview'
 import TemplateSwitcherModal from '../components/cv-editor/TemplateSwitcherModal'
 import ScoreModal from '../components/cv-editor/ScoreModal'
 import VersionHistoryModal from '../components/cv-editor/VersionHistoryModal'
-import { mockCvDetails, createBlankCv, createSampleCv } from '../data/mockCvDetails'
+import { createBlankCv, createSampleCv } from '../data/mockCvDetails'
 import { cvTemplates } from '../data/cvTemplates'
+import { fetchCv, createCv, updateCv } from '../lib/api'
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -20,10 +21,8 @@ const PAPER_SIZE_OPTIONS = [
 const TOOLBAR_BUTTON_CLASS =
   'shrink-0 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition'
 
-// TODO: khi tích hợp API — CV đã lưu thì GET /api/cvs/:id, chọn mẫu thì
-// GET /api/templates/:templateId; lưu bằng POST /api/cvs (mới) hoặc PUT /api/cvs/:id (đã có).
 // TODO: autosave/lịch sử phiên bản hiện chỉ lưu tạm trong bộ nhớ phiên làm việc,
-// cần PUT /api/cvs/:id định kỳ + GET /api/cvs/:id/versions khi có backend.
+// cần PUT /api/cvs/:id định kỳ + GET /api/cvs/:id/versions để đồng bộ thật.
 function CvEditor() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -33,7 +32,6 @@ function CvEditor() {
   const template = templateId ? cvTemplates.find((t) => t.id === templateId) : null
 
   const [cv, setCv] = useState(() => {
-    if (id && mockCvDetails[id]) return structuredClone(mockCvDetails[id])
     if (template) {
       return {
         ...structuredClone(createSampleCv()),
@@ -45,10 +43,35 @@ function CvEditor() {
     return createBlankCv()
   })
 
+  const [loading, setLoading] = useState(Boolean(id))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const [activeModal, setActiveModal] = useState(null)
   const [history, setHistory] = useState([])
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const isFirstRender = useRef(true)
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+
+    setLoading(true)
+    setError('')
+    fetchCv(id)
+      .then((data) => {
+        if (!cancelled) setCv(data)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [id])
 
   useEffect(() => {
     if (isFirstRender.current) {
@@ -57,15 +80,28 @@ function CvEditor() {
     }
 
     const timeout = setTimeout(() => {
-      setLastSavedAt(new Date())
       setHistory((prev) => [{ id: generateId(), timestamp: new Date(), cv: structuredClone(cv) }, ...prev].slice(0, 10))
     }, 1500)
 
     return () => clearTimeout(timeout)
   }, [cv])
 
-  function handleSave() {
-    navigate('/dashboard')
+  async function handleSave() {
+    setSaving(true)
+    setError('')
+    try {
+      if (id) {
+        await updateCv(id, cv)
+      } else {
+        await createCv(cv)
+      }
+      setLastSavedAt(new Date())
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   function handleSelectTemplate(newTemplate) {
@@ -74,6 +110,14 @@ function CvEditor() {
 
   function handleRestore(snapshot) {
     setCv(structuredClone(snapshot.cv))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải CV...</p>
+      </div>
+    )
   }
 
   return (
@@ -103,15 +147,17 @@ function CvEditor() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {error && <span className="hidden sm:inline text-xs text-red-600 dark:text-red-400">{error}</span>}
           <span className="hidden sm:inline text-xs text-gray-400 dark:text-gray-500">
             {lastSavedAt ? `Đã lưu lúc ${lastSavedAt.toLocaleTimeString('vi-VN')}` : 'Chưa có thay đổi'}
           </span>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 active:bg-brand-800 transition"
+            disabled={saving}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 active:bg-brand-800 disabled:opacity-60 disabled:cursor-not-allowed transition"
           >
-            Lưu CV
+            {saving ? 'Đang lưu...' : 'Lưu CV'}
           </button>
         </div>
       </header>
